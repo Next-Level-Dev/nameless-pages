@@ -140,10 +140,11 @@ export default function NewPostPage() {
                   name="content_type"
                   className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm shadow-sm focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900"
                 >
-                  <option value="text">Writing</option>
-                  <option value="art">Art</option>
-                  <option value="music">Music</option>
-                  <option value="code">Code</option>
+                  <option value="story">Story</option>
+                  <option value="poem">Poem</option>
+                  <option value="article">Article</option>
+                  <option value="script">Script</option>
+                  <option value="other">Other</option>
                 </select>
               </div>
 
