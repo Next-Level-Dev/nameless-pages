@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { getSessionUser } from "@/lib/auth";
@@ -19,6 +19,12 @@ export const metadata: Metadata = {
   description: "A place to release creative work",
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -33,7 +39,7 @@ export default async function RootLayout({
     >
       {/* h-full flex flex-col: fills screen, never scrolls at viewport level */}
       <body className="h-full flex flex-col overflow-hidden">
-        <NavBar user={user ? { username: user.username, display_name: user.display_name ?? null } : null} />
+        <NavBar user={user ? { username: user.username, display_name: user.display_name ?? null, role: user.role } : null} />
         {/* flex-1 + min-h-0 lets children set their own scroll */}
         <div className="flex-1 min-h-0">
           {children}

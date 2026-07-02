@@ -7,6 +7,7 @@ import { useState } from "react";
 interface NavUser {
   username: string;
   display_name: string | null;
+  role: string;
 }
 
 export default function NavBar({ user }: { user: NavUser | null }) {
@@ -19,6 +20,8 @@ export default function NavBar({ user }: { user: NavUser | null }) {
     router.refresh();
     setMenuOpen(false);
   }
+
+  const isTrustedAuthor = user?.role === 'trusted_author';
 
   return (
     <nav className="shrink-0 border-b border-zinc-200 dark:border-zinc-800 bg-[var(--background)]">
@@ -54,8 +57,15 @@ export default function NavBar({ user }: { user: NavUser | null }) {
               >
                 Dashboard
               </Link>
-              <span className="text-xs text-zinc-400">
-                {user.display_name || user.username}
+              <span className="flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-amber-500 dark:text-amber-400">
+                  @{user.username}
+                </span>
+                {isTrustedAuthor && (
+                  <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                    ★
+                  </span>
+                )}
               </span>
               <button
                 onClick={handleLogout}
@@ -81,15 +91,9 @@ export default function NavBar({ user }: { user: NavUser | null }) {
           aria-label={menuOpen ? "Close menu" : "Open menu"}
           aria-expanded={menuOpen}
         >
-          <span
-            className={`block h-0.5 w-5 bg-current transition-transform duration-200 ${menuOpen ? "translate-y-2 rotate-45" : ""}`}
-          />
-          <span
-            className={`block h-0.5 w-5 bg-current transition-opacity duration-200 ${menuOpen ? "opacity-0" : ""}`}
-          />
-          <span
-            className={`block h-0.5 w-5 bg-current transition-transform duration-200 ${menuOpen ? "-translate-y-2 -rotate-45" : ""}`}
-          />
+          <span className={`block h-0.5 w-5 bg-current transition-transform duration-200 ${menuOpen ? "translate-y-2 rotate-45" : ""}`} />
+          <span className={`block h-0.5 w-5 bg-current transition-opacity duration-200 ${menuOpen ? "opacity-0" : ""}`} />
+          <span className={`block h-0.5 w-5 bg-current transition-transform duration-200 ${menuOpen ? "-translate-y-2 -rotate-45" : ""}`} />
         </button>
       </div>
 
@@ -119,8 +123,15 @@ export default function NavBar({ user }: { user: NavUser | null }) {
               >
                 Dashboard
               </Link>
-              <span className="text-xs text-zinc-400">
-                Signed in as {user.display_name || user.username}
+              <span className="flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-amber-500 dark:text-amber-400">
+                  @{user.username}
+                </span>
+                {isTrustedAuthor && (
+                  <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                    ★
+                  </span>
+                )}
               </span>
               <button
                 onClick={handleLogout}

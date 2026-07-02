@@ -3,12 +3,15 @@ import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { getDb } from './db'
 
+export type UserRole = 'reader' | 'author' | 'trusted_author'
+
 export interface User {
   id: number
   username: string
   email: string
   display_name: string | null
   bio: string
+  role: UserRole
   created_at: string
 }
 
@@ -50,7 +53,7 @@ export async function getSessionUser(): Promise<User | null> {
     if (!session) return null
 
     const user = db.prepare(`
-      SELECT id, username, email, display_name, bio, created_at FROM users
+      SELECT id, username, email, display_name, bio, role, created_at FROM users
       WHERE id = ?
     `).get(session.user_id) as User | undefined
 

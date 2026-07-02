@@ -36,7 +36,6 @@ export default function RegisterPage() {
   }
 
   return (
-    /* Fill remaining height, center the card */
     <div className="h-full overflow-y-auto flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-sm">
         <h1 className="mb-6 text-center text-2xl font-bold">Create Account</h1>
@@ -55,10 +54,15 @@ export default function RegisterPage() {
               name="username"
               type="text"
               required
-              minLength={3}
+              minLength={5}
+              maxLength={15}
+              pattern="[a-z0-9_]+"
               autoComplete="username"
               className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm shadow-sm focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900"
             />
+            <p className="mt-1 text-xs text-zinc-400">
+              5–15 characters. Lowercase letters, numbers, and underscores only.
+            </p>
           </div>
           <div>
             <label htmlFor="email" className="block text-sm font-medium">
@@ -92,7 +96,7 @@ export default function RegisterPage() {
             disabled={loading}
             className="w-full rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
-            {loading ? 'Creating account...' : 'Create Account'}
+            {loading ? 'Creating account…' : 'Create Account'}
           </button>
         </form>
         <p className="mt-4 text-center text-sm text-zinc-500">
