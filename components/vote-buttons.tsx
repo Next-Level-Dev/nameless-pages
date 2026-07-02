@@ -9,6 +9,7 @@ interface Props {
   initialUserVote: 1 | -1 | null
   initialFavorited: boolean
   isLoggedIn: boolean
+  isVerified: boolean
 }
 
 export default function VoteButtons({
@@ -17,6 +18,7 @@ export default function VoteButtons({
   initialUserVote,
   initialFavorited,
   isLoggedIn,
+  isVerified,
 }: Props) {
   const router = useRouter()
   const [score, setScore] = useState(initialScore)
@@ -24,8 +26,11 @@ export default function VoteButtons({
   const [favorited, setFavorited] = useState(initialFavorited)
   const [busy, setBusy] = useState(false)
 
+  // Can only vote/favorite if logged in AND verified
+  const canInteract = isLoggedIn && isVerified
+
   async function handleVote(vote: 1 | -1) {
-    if (!isLoggedIn || busy) return
+    if (!canInteract || busy) return
     setBusy(true)
 
     const prev = userVote
@@ -86,21 +91,26 @@ export default function VoteButtons({
   }
 
   const baseBtn = 'flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors min-h-[40px]'
-  const disabledClass = !isLoggedIn ? 'opacity-30 cursor-not-allowed grayscale' : ''
+  const disabledClass = !canInteract ? 'opacity-30 cursor-not-allowed grayscale' : ''
   const inactiveBtn = 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700'
+
+  // Create title based on login/verification status
+  let title = ''
+  if (!isLoggedIn) title = 'Sign in to vote or favorite'
+  else if (!isVerified) title = 'Verify your email to vote or favorite'
 
   return (
     <div
       className="flex flex-wrap items-center gap-2"
-      title={!isLoggedIn ? 'Sign in to vote or favorite' : undefined}
+      title={title}
     >
       {/* Upvote */}
       <button
         onClick={() => handleVote(1)}
-        disabled={!isLoggedIn || busy}
+        disabled={!canInteract || busy}
         aria-label="Upvote"
         className={`${baseBtn} ${disabledClass} ${
-          isLoggedIn && userVote === 1
+          canInteract && userVote === 1
             ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
             : inactiveBtn
         }`}
@@ -123,10 +133,10 @@ export default function VoteButtons({
       {/* Downvote */}
       <button
         onClick={() => handleVote(-1)}
-        disabled={!isLoggedIn || busy}
+        disabled={!canInteract || busy}
         aria-label="Downvote"
         className={`${baseBtn} ${disabledClass} ${
-          isLoggedIn && userVote === -1
+          canInteract && userVote === -1
             ? 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400'
             : inactiveBtn
         }`}
@@ -143,10 +153,10 @@ export default function VoteButtons({
       {/* Favorite */}
       <button
         onClick={handleFavorite}
-        disabled={!isLoggedIn || busy}
+        disabled={!canInteract || busy}
         aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
         className={`${baseBtn} ${disabledClass} ${
-          isLoggedIn && favorited
+          canInteract && favorited
             ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400'
             : inactiveBtn
         }`}
@@ -154,14 +164,14 @@ export default function VoteButtons({
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
-          fill={isLoggedIn && favorited ? 'currentColor' : 'none'}
+          fill={canInteract && favorited ? 'currentColor' : 'none'}
           stroke="currentColor"
-          strokeWidth={isLoggedIn && favorited ? 0 : 1.5}
+          strokeWidth={canInteract && favorited ? 0 : 1.5}
           className="w-4 h-4 shrink-0"
         >
           <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
         </svg>
-        <span>{isLoggedIn && favorited ? 'Favorited' : 'Favorite'}</span>
+        <span>{canInteract && favorited ? 'Favorited' : 'Favorite'}</span>
       </button>
     </div>
   )

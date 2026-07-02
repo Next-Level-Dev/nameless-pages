@@ -1,7 +1,6 @@
 'use client'
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 interface NavUser {
@@ -11,15 +10,7 @@ interface NavUser {
 }
 
 export default function NavBar({ user }: { user: NavUser | null }) {
-  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
-
-  async function handleLogout() {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/');
-    router.refresh();
-    setMenuOpen(false);
-  }
 
   const isTrustedAuthor = user?.role === 'trusted_author';
 
@@ -50,30 +41,17 @@ export default function NavBar({ user }: { user: NavUser | null }) {
             Tutorials
           </Link>
           {user ? (
-            <>
-              <Link
-                href="/dashboard"
-                className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-              >
-                Dashboard
-              </Link>
-              <span className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold text-amber-500 dark:text-amber-400">
-                  @{user.username}
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-1.5 text-xs font-semibold text-amber-500 hover:text-amber-400 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
+            >
+              @{user.username}
+              {isTrustedAuthor && (
+                <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                  ★
                 </span>
-                {isTrustedAuthor && (
-                  <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                    ★
-                  </span>
-                )}
-              </span>
-              <button
-                onClick={handleLogout}
-                className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-              >
-                Logout
-              </button>
-            </>
+              )}
+            </Link>
           ) : (
             <Link
               href="/login"
@@ -115,31 +93,18 @@ export default function NavBar({ user }: { user: NavUser | null }) {
             Tutorials
           </Link>
           {user ? (
-            <>
-              <Link
-                href="/dashboard"
-                className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-                onClick={() => setMenuOpen(false)}
-              >
-                Dashboard
-              </Link>
-              <span className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold text-amber-500 dark:text-amber-400">
-                  @{user.username}
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-1.5 w-fit text-xs font-semibold text-amber-500 hover:text-amber-400 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
+              onClick={() => setMenuOpen(false)}
+            >
+              @{user.username}
+              {isTrustedAuthor && (
+                <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                  ★
                 </span>
-                {isTrustedAuthor && (
-                  <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                    ★
-                  </span>
-                )}
-              </span>
-              <button
-                onClick={handleLogout}
-                className="text-left text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-              >
-                Logout
-              </button>
-            </>
+              )}
+            </Link>
           ) : (
             <Link
               href="/login"

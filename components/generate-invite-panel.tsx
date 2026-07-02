@@ -1,13 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 interface Props {
   remainingToday: number
 }
 
 export default function GenerateInvitePanel({ remainingToday: initialRemaining }: Props) {
+  const router = useRouter()
   const [remaining, setRemaining] = useState(initialRemaining)
+
+  // Sync with prop when it changes (after page refresh)
+  useEffect(() => {
+    setRemaining(initialRemaining)
+  }, [initialRemaining])
   const [generating, setGenerating] = useState(false)
   const [generated, setGenerated] = useState<{ code: string; expires_at: string } | null>(null)
   const [error, setError] = useState('')
@@ -27,6 +34,8 @@ export default function GenerateInvitePanel({ remainingToday: initialRemaining }
     if (res.ok) {
       setGenerated({ code: data.code, expires_at: data.expires_at })
       setRemaining(data.remaining_today)
+      // Refresh to update server-side count
+      router.refresh()
     } else {
       setError(data.error || 'Failed to generate code.')
     }

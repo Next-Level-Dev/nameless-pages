@@ -8,6 +8,7 @@ import TabSwitcher from "@/components/tab-switcher";
 import RedeemInvitePanel from "@/components/redeem-invite-panel";
 import GenerateInvitePanel from "@/components/generate-invite-panel";
 import EmailVerificationPrompt from "@/components/email-verification-prompt";
+import { LogoutButton } from "@/components/logout-button";
 
 interface ContentItem {
   id: number;
@@ -96,11 +97,9 @@ export default async function DashboardPage() {
 
   let remainingToday = 0;
   if (isTrustedAuthor) {
-    const todayStart = new Date();
-    todayStart.setUTCHours(0, 0, 0, 0);
     const todayCount = (db.prepare(
-      `SELECT COUNT(*) as count FROM invite_codes WHERE created_by = ? AND created_at >= ?`
-    ).get(user.id, todayStart.toISOString()) as { count: number }).count;
+      `SELECT COUNT(*) as count FROM invite_codes WHERE created_by = ? AND date(created_at) = date('now')`
+    ).get(user.id) as { count: number }).count;
     remainingToday = Math.max(0, 5 - todayCount);
   }
 
@@ -298,21 +297,29 @@ export default async function DashboardPage() {
               </div>
             </div>
             {isAuthor && (
-              canCreate ? (
-                <Link
-                  href="/dashboard/new"
-                  className="shrink-0 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-                >
-                  New Page
-                </Link>
-              ) : (
-                <span
-                  title={limitReason}
-                  className="shrink-0 rounded-lg bg-zinc-200 px-4 py-2 text-sm font-medium text-zinc-400 cursor-not-allowed dark:bg-zinc-800 dark:text-zinc-600"
-                >
-                  New Page
-                </span>
-              )
+              <div className="shrink-0 flex items-center gap-3">
+                <LogoutButton />
+                {canCreate ? (
+                  <Link
+                    href="/dashboard/new"
+                    className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                  >
+                    New Page
+                  </Link>
+                ) : (
+                  <span
+                    title={limitReason}
+                    className="rounded-lg bg-zinc-200 px-4 py-2 text-sm font-medium text-zinc-400 cursor-not-allowed dark:bg-zinc-800 dark:text-zinc-600"
+                  >
+                    New Page
+                  </span>
+                )}
+              </div>
+            )}
+            {!isAuthor && (
+              <div className="shrink-0">
+                <LogoutButton />
+              </div>
             )}
           </div>
         </div>

@@ -24,13 +24,12 @@ export async function POST() {
     const db = getDb()
 
     // Count codes generated today (UTC day boundary)
-    const todayStart = new Date()
-    todayStart.setUTCHours(0, 0, 0, 0)
-
+    // Use SQLite's date() to avoid JS ISO string vs SQLite datetime format mismatch
+    // (SQLite stores datetime('now') as "YYYY-MM-DD HH:MM:SS", not ISO 8601 with T/Z)
     const todayCount = (db.prepare(`
       SELECT COUNT(*) as count FROM invite_codes
-      WHERE created_by = ? AND created_at >= ?
-    `).get(user.id, todayStart.toISOString()) as { count: number }).count
+      WHERE created_by = ? AND date(created_at) = date('now')
+    `).get(user.id) as { count: number }).count
 
     if (todayCount >= MAX_PER_DAY) {
       return NextResponse.json(

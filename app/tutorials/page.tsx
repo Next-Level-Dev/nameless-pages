@@ -7,7 +7,7 @@ export default function TutorialsPage() {
         <div className="mx-auto max-w-5xl px-4 py-5 sm:py-8">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Tutorials</h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Guides and resources for the fellowship
+            Guides and resources for the fellowship!
           </p>
         </div>
       </header>

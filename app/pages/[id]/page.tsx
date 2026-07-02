@@ -131,6 +131,7 @@ export default async function PageViewer({ params }: Props) {
               initialUserVote={userVote}
               initialFavorited={isFavorited}
               isLoggedIn={!!user}
+              isVerified={!!user?.verified}
             />
           </div>
 
