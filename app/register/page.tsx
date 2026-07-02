@@ -36,7 +36,8 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex flex-1 items-center justify-center px-4">
+    /* Fill remaining height, center the card */
+    <div className="h-full overflow-y-auto flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-sm">
         <h1 className="mb-6 text-center text-2xl font-bold">Create Account</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -55,6 +56,7 @@ export default function RegisterPage() {
               type="text"
               required
               minLength={3}
+              autoComplete="username"
               className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm shadow-sm focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900"
             />
           </div>
@@ -67,6 +69,7 @@ export default function RegisterPage() {
               name="email"
               type="email"
               required
+              autoComplete="email"
               className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm shadow-sm focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900"
             />
           </div>
@@ -80,6 +83,7 @@ export default function RegisterPage() {
               type="password"
               required
               minLength={6}
+              autoComplete="new-password"
               className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm shadow-sm focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900"
             />
           </div>
@@ -93,7 +97,10 @@ export default function RegisterPage() {
         </form>
         <p className="mt-4 text-center text-sm text-zinc-500">
           Already have an account?{' '}
-          <Link href="/login" className="font-medium underline underline-offset-2 hover:text-zinc-900 dark:hover:text-zinc-100">
+          <Link
+            href="/login"
+            className="font-medium underline underline-offset-2 hover:text-zinc-900 dark:hover:text-zinc-100"
+          >
             Sign In
           </Link>
         </p>

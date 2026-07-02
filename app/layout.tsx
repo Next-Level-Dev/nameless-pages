@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
-import { LogoutButton } from "@/components/logout-button";
+import NavBar from "@/components/nav-bar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,50 +31,13 @@ export default async function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <nav className="border-b border-zinc-200 dark:border-zinc-800">
-          <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-            <Link href="/" className="text-lg font-bold tracking-tight">
-              Nameless Pages
-            </Link>
-            <div className="flex items-center gap-4 text-sm">
-              <Link
-                href="/"
-                className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-              >
-                Browse
-              </Link>
-              <Link
-                href="/tutorials"
-                className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-              >
-                Tutorials
-              </Link>
-              {user ? (
-                <>
-                  <Link
-                    href="/dashboard"
-                    className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-                  >
-                    Dashboard
-                  </Link>
-                  <span className="text-xs text-zinc-400">
-                    {user.display_name || user.username}
-                  </span>
-                  <LogoutButton />
-                </>
-              ) : (
-                <Link
-                  href="/login"
-                  className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-                >
-                  Sign In
-                </Link>
-              )}
-            </div>
-          </div>
-        </nav>
-        {children}
+      {/* h-full flex flex-col: fills screen, never scrolls at viewport level */}
+      <body className="h-full flex flex-col overflow-hidden">
+        <NavBar user={user ? { username: user.username, display_name: user.display_name ?? null } : null} />
+        {/* flex-1 + min-h-0 lets children set their own scroll */}
+        <div className="flex-1 min-h-0">
+          {children}
+        </div>
       </body>
     </html>
   );

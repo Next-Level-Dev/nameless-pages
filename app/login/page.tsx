@@ -35,7 +35,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-1 items-center justify-center px-4">
+    /* Fill remaining height, center the card */
+    <div className="h-full overflow-y-auto flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-sm">
         <h1 className="mb-6 text-center text-2xl font-bold">Sign In</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -53,6 +54,7 @@ export default function LoginPage() {
               name="username"
               type="text"
               required
+              autoComplete="username"
               className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm shadow-sm focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900"
             />
           </div>
@@ -65,6 +67,7 @@ export default function LoginPage() {
               name="password"
               type="password"
               required
+              autoComplete="current-password"
               className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm shadow-sm focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900"
             />
           </div>
@@ -78,7 +81,10 @@ export default function LoginPage() {
         </form>
         <p className="mt-4 text-center text-sm text-zinc-500">
           Don&apos;t have an account?{' '}
-          <Link href="/register" className="font-medium underline underline-offset-2 hover:text-zinc-900 dark:hover:text-zinc-100">
+          <Link
+            href="/register"
+            className="font-medium underline underline-offset-2 hover:text-zinc-900 dark:hover:text-zinc-100"
+          >
             Register
           </Link>
         </p>
