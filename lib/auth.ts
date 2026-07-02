@@ -12,6 +12,7 @@ export interface User {
   display_name: string | null
   bio: string
   role: UserRole
+  verified: number
   created_at: string
 }
 
@@ -53,7 +54,7 @@ export async function getSessionUser(): Promise<User | null> {
     if (!session) return null
 
     const user = db.prepare(`
-      SELECT id, username, email, display_name, bio, role, created_at FROM users
+      SELECT id, username, email, display_name, bio, role, verified, created_at FROM users
       WHERE id = ?
     `).get(session.user_id) as User | undefined
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDb } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
+import { sanitizePlainText } from '@/lib/sanitize'
 
 const CONTENT_CAP = 5
 const COOLDOWN_HOURS = 24
@@ -8,6 +9,11 @@ const COOLDOWN_HOURS = 24
 export async function GET(request: NextRequest) {
   try {
     const user = await requireAuth()
+    
+    if (!user.verified) {
+      return NextResponse.json({ errors: ['Please verify your email first'] }, { status: 403 })
+    }
+    
     const db = getDb()
 
     const url = new URL(request.url)
@@ -49,6 +55,10 @@ export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth()
 
+    if (!user.verified) {
+      return NextResponse.json({ errors: ['Please verify your email first'] }, { status: 403 })
+    }
+
     // Only authors and trusted_authors can create content
     if (user.role === 'reader') {
       return NextResponse.json(
@@ -59,8 +69,9 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
 
-    const title = (body.title ?? '').toString().trim()
-    const excerpt = (body.excerpt ?? '').toString().trim()
+    // Sanitize all inputs to prevent XSS
+    const title = sanitizePlainText(body.title ?? '')
+    const excerpt = sanitizePlainText(body.excerpt ?? '')
     const content_type = (body.content_type ?? 'text').toString().trim()
 
     if (!title) {

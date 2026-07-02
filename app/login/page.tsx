@@ -26,7 +26,12 @@ export default function LoginPage() {
 
     setLoading(false)
     if (res.ok) {
-      router.push('/dashboard')
+      const data = await res.json()
+      if (data.verified === false) {
+        router.push('/dashboard?unverified=true')
+      } else {
+        router.push('/dashboard')
+      }
       router.refresh()
     } else {
       const data = await res.json()

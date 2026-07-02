@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3'
 import path from 'path'
+import bcrypt from 'bcryptjs'
 
 const dbPath = path.join(process.cwd(), 'data', 'nameless-pages.db')
 
@@ -15,6 +16,28 @@ export function getDb(): Database.Database {
   return db
 }
 
+// Create default admin account if configured via environment variables
+function createDefaultAdmin(db: Database.Database) {
+  const username = process.env.DEFAULT_ADMIN_USER?.trim()
+  const password = process.env.DEFAULT_ADMIN_PASS
+
+  if (!username || !password || password.length < 6) {
+    return
+  }
+
+  // Check if already exists
+  const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username)
+  if (existing) {
+    return
+  }
+
+  const passwordHash = bcrypt.hashSync(password, 12)
+  db.prepare(`
+    INSERT INTO users (username, email, password_hash, display_name, role, verified)
+    VALUES (?, ?, ?, ?, 'trusted_author', 1)
+  `).run(username, `admin@${username}.local`, passwordHash, username)
+}
+
 function initSchema(db: Database.Database) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
@@ -25,8 +48,26 @@ function initSchema(db: Database.Database) {
       display_name TEXT,
       bio TEXT DEFAULT '',
       role TEXT NOT NULL DEFAULT 'reader' CHECK(role IN ('reader', 'author', 'trusted_author')),
+      verified INTEGER NOT NULL DEFAULT 0 CHECK(verified IN (0, 1)),
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS email_verification_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token TEXT UNIQUE NOT NULL,
+      expires_at TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS email_rate_limits (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT NOT NULL,
+      hour_key TEXT NOT NULL,  -- format: YYYY-MM-DD-HH
+      count INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(email, hour_key)
     );
 
     CREATE TABLE IF NOT EXISTS sessions (
@@ -75,6 +116,34 @@ function initSchema(db: Database.Database) {
       used_at TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
+
+    -- Rate limiting tables
+    CREATE TABLE IF NOT EXISTS rate_limits_60s (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      identifier TEXT NOT NULL,
+      window_key TEXT NOT NULL,
+      count INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(identifier, window_key)
+    );
+
+    CREATE TABLE IF NOT EXISTS rate_limits_300s (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      identifier TEXT NOT NULL,
+      window_key TEXT NOT NULL,
+      count INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(identifier, window_key)
+    );
+
+    CREATE TABLE IF NOT EXISTS rate_limits_3600s (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      identifier TEXT NOT NULL,
+      window_key TEXT NOT NULL,
+      count INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(identifier, window_key)
+    );
   `)
 
   // Migrate existing users: add role column if missing (SQLite doesn't support
@@ -84,6 +153,16 @@ function initSchema(db: Database.Database) {
   } catch {
     // Column already exists — ignore
   }
+
+  // Migrate: add verified column if missing
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN verified INTEGER NOT NULL DEFAULT 0`)
+  } catch {
+    // Column already exists — ignore
+  }
+
+  // Create default admin account if configured
+  createDefaultAdmin(db)
 }
 
 /**

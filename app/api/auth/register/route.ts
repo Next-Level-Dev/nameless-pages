@@ -1,16 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDb } from '@/lib/db'
 import { hashPassword, createSession } from '@/lib/auth'
+import { validateUsername } from '@/lib/banned-names'
+import { checkRateLimit, RateLimits } from '@/lib/rate-limit'
 
-const USERNAME_RE = /^[a-z0-9_]{5,15}$/
+function getClientIp(request: NextRequest): string {
+  const forwarded = request.headers.get('x-forwarded-for')
+  if (forwarded) return forwarded.split(',')[0].trim()
+  return request.headers.get('x-real-ip') || 'unknown'
+}
 
 function validate(body: { username?: string; email?: string; password?: string }) {
   const errors: string[] = []
 
   if (!body.username) {
     errors.push('Username is required')
-  } else if (!USERNAME_RE.test(body.username)) {
-    errors.push('Username must be 5–15 characters: lowercase letters, numbers, and underscores only')
+  } else {
+    const usernameCheck = validateUsername(body.username)
+    if (!usernameCheck.valid) {
+      errors.push(usernameCheck.reason!)
+    }
   }
 
   if (!body.email || !body.email.includes('@')) {
@@ -26,6 +35,16 @@ function validate(body: { username?: string; email?: string; password?: string }
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit registrations
+    const ip = getClientIp(request)
+    const rateLimit = checkRateLimit(`register:${ip}`, RateLimits.REGISTER.window, RateLimits.REGISTER.max)
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { errors: [`Too many accounts created. Try again in ${rateLimit.resetIn} seconds.`] },
+        { status: 429, headers: { 'Retry-After': rateLimit.resetIn.toString() } }
+      )
+    }
+
     const body = await request.json()
     const errors = validate(body)
     if (errors.length > 0) {

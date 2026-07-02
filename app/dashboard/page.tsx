@@ -7,6 +7,7 @@ import DisplayNameEditor from "@/components/display-name-editor";
 import TabSwitcher from "@/components/tab-switcher";
 import RedeemInvitePanel from "@/components/redeem-invite-panel";
 import GenerateInvitePanel from "@/components/generate-invite-panel";
+import EmailVerificationPrompt from "@/components/email-verification-prompt";
 
 interface ContentItem {
   id: number;
@@ -62,6 +63,11 @@ export default async function DashboardPage() {
     user = await requireAuth();
   } catch {
     redirect("/login");
+  }
+
+  // Block unverified users from dashboard
+  if (!user.verified) {
+    redirect("/verify-email");
   }
 
   const db = getDb();
@@ -252,6 +258,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
+
+      {/* Email verification prompt */}
+      <EmailVerificationPrompt verified={Boolean(user.verified)} />
 
       {/* Fixed header */}
       <header className="shrink-0 border-b border-zinc-200 dark:border-zinc-800">

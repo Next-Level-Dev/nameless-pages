@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDb } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
+import { sanitizePlainText, sanitizeRichText } from '@/lib/sanitize'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -9,6 +10,11 @@ interface Props {
 export async function PATCH(request: NextRequest, { params }: Props) {
   try {
     const user = await requireAuth()
+    
+    if (!user.verified) {
+      return NextResponse.json({ errors: ['Please verify your email first'] }, { status: 403 })
+    }
+    
     const { id } = await params
     const numId = Number(id)
 
@@ -35,8 +41,9 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     const values: unknown[] = []
 
     if (body.body !== undefined) {
+      // Rich text - allow custom markup but strip HTML/scripts
       fields.push('body = ?')
-      values.push(body.body)
+      values.push(sanitizeRichText(body.body))
     }
     if (body.published !== undefined) {
       fields.push('published = ?')
@@ -44,11 +51,11 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     }
     if (body.title !== undefined) {
       fields.push('title = ?')
-      values.push(body.title)
+      values.push(sanitizePlainText(body.title))
     }
     if (body.excerpt !== undefined) {
       fields.push('excerpt = ?')
-      values.push(body.excerpt)
+      values.push(sanitizePlainText(body.excerpt))
     }
 
     if (fields.length === 0) {

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSessionUser, requireAuth } from '@/lib/auth'
 import { getDb } from '@/lib/db'
+import { validateDisplayName } from '@/lib/banned-names'
+import { sanitizePlainText } from '@/lib/sanitize'
 
 export async function GET() {
   const user = await getSessionUser()
@@ -13,15 +15,20 @@ export async function GET() {
 export async function PATCH(request: NextRequest) {
   try {
     const user = await requireAuth()
-    const body = await request.json()
-    const raw = (body.display_name ?? '').toString().trim()
-
-    if (raw.length < 3 || raw.length > 15) {
-      return NextResponse.json(
-        { errors: ['Display name must be 3–15 characters'] },
-        { status: 400 }
-      )
+    
+    if (!user.verified) {
+      return NextResponse.json({ errors: ['Please verify your email first'] }, { status: 403 })
     }
+    
+    const body = await request.json()
+    // First validate the raw input before sanitizing
+    const validation = validateDisplayName(body.display_name ?? '')
+    if (!validation.valid) {
+      return NextResponse.json({ errors: [validation.reason!] }, { status: 400 })
+    }
+
+    // Sanitize to strip any HTML/scripts
+    const raw = sanitizePlainText(body.display_name ?? '')
 
     const db = getDb()
     db.prepare(

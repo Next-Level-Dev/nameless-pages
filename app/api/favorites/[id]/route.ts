@@ -14,6 +14,10 @@ export async function POST(request: NextRequest, { params }: Props) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  if (!user.verified) {
+    return NextResponse.json({ error: 'Please verify your email first' }, { status: 403 })
+  }
+
   const { id } = await params
   const numId = Number(id)
   if (!Number.isInteger(numId) || numId <= 0) {

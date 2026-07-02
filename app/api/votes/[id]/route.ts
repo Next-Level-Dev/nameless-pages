@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDb } from '@/lib/db'
 import { getSessionUser } from '@/lib/auth'
+import { checkRateLimit, RateLimits } from '@/lib/rate-limit'
 
 interface Props {
   params: Promise<{ id: string }>
+}
+
+function getClientIp(request: NextRequest): string {
+  const forwarded = request.headers.get('x-forwarded-for')
+  if (forwarded) return forwarded.split(',')[0].trim()
+  return request.headers.get('x-real-ip') || 'unknown'
 }
 
 // POST /api/votes/[id]  body: { vote: 1 | -1 }
@@ -13,6 +20,20 @@ export async function POST(request: NextRequest, { params }: Props) {
   const user = await getSessionUser()
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (!user.verified) {
+    return NextResponse.json({ error: 'Please verify your email first' }, { status: 403 })
+  }
+
+  // Rate limit voting
+  const ip = getClientIp(request)
+  const rateLimit = checkRateLimit(`vote:${ip}`, RateLimits.VOTE.window, RateLimits.VOTE.max)
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many votes. Try again later.' },
+      { status: 429, headers: { 'Retry-After': rateLimit.resetIn.toString() } }
+    )
   }
 
   const { id } = await params

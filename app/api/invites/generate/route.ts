@@ -10,6 +10,10 @@ export async function POST() {
   try {
     const user = await requireAuth()
 
+    if (!user.verified) {
+      return NextResponse.json({ errors: ['Please verify your email first'] }, { status: 403 })
+    }
+
     if (user.role !== 'trusted_author') {
       return NextResponse.json(
         { error: 'Only trusted authors can generate invite codes.' },
