@@ -33,11 +33,11 @@ export default function NewPostPage() {
           : false
 
         if (total >= cap) {
-          setCanCreateState({ loading: false, canCreate: false, reason: `You've reached the maximum of ${cap} pieces of content.` })
+          setCanCreateState({ loading: false, canCreate: false, reason: `You've reached the maximum of ${cap} pages.` })
         } else if (recentlyCreated) {
           const msSince = Date.now() - new Date(latest.created_at).getTime()
           const hoursLeft = ((24 * 3600 * 1000 - msSince) / 3600000).toFixed(1)
-          setCanCreateState({ loading: false, canCreate: false, reason: `You can only create one piece every 24 hours. Try again in ${hoursLeft}h.` })
+          setCanCreateState({ loading: false, canCreate: false, reason: `You can only create one page every 24 hours. Try again in ${hoursLeft}h.` })
         } else {
           setCanCreateState({ loading: false, canCreate: true, reason: '' })
         }
@@ -68,7 +68,7 @@ export default function NewPostPage() {
       router.push(`/dashboard/${data.id}/edit`)
     } else {
       const data = await res.json()
-      setError(data.errors?.[0] || 'Failed to create post')
+      setError(data.errors?.[0] || 'Failed to create page')
     }
   }
 

@@ -18,6 +18,7 @@ interface ContentItem {
   published: number;
   created_at: string;
   updated_at: string;
+  score: number;
 }
 
 interface FavoriteItem {
@@ -77,8 +78,13 @@ export default async function DashboardPage() {
 
   const items = isAuthor
     ? (db.prepare(
-        `SELECT id, title, content_type, excerpt, published, created_at, updated_at
-         FROM content WHERE user_id = ? ORDER BY created_at DESC`
+        `SELECT c.id, c.title, c.content_type, c.excerpt, c.published, c.created_at, c.updated_at,
+                COALESCE(SUM(v.vote), 0) as score
+         FROM content c
+         LEFT JOIN votes v ON v.content_id = c.id
+         WHERE c.user_id = ?
+         GROUP BY c.id
+         ORDER BY c.created_at DESC`
       ).all(user.id) as ContentItem[])
     : [];
 
@@ -112,14 +118,12 @@ export default async function DashboardPage() {
   if (count >= CONTENT_CAP) {
     limitReason = `You've reached the maximum of ${CONTENT_CAP} pages.`;
   } else if (recentlyCreated && latest) {
-    limitReason = `Cooldown active — next page in ${hoursLeft}h.`;
+    limitReason = `Cooldown active (next page in ${hoursLeft}h)`;
   }
 
   // ── Pages panel content ──
   const pagesPanel = (
     <div className="mx-auto max-w-5xl px-4 py-6 space-y-6">
-      {isTrustedAuthor && <GenerateInvitePanel remainingToday={remainingToday} />}
-
       {count === 0 ? (
         <div className="flex flex-col items-center justify-center h-48 text-center">
           <div className="mb-4 text-5xl">&#9997;</div>
@@ -160,13 +164,6 @@ export default async function DashboardPage() {
                       ) : (
                         <span className="truncate text-base font-semibold">{item.title}</span>
                       )}
-                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                        item.published
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                          : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-                      }`}>
-                        {item.published ? "Public" : "Draft"}
-                      </span>
                     </div>
                     {item.excerpt && (
                       <p className="mt-1 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-400">
@@ -174,12 +171,19 @@ export default async function DashboardPage() {
                       </p>
                     )}
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+                      <span className={item.published ? "text-green-600 dark:text-green-400" : "text-zinc-400"}>
+                        {item.published ? "Public" : "Private"}
+                      </span>
+                      <span>&middot;</span>
                       <span>
                         {new Date(item.created_at).toLocaleDateString("en-US", {
                           year: "numeric", month: "short", day: "numeric",
                         })}
                       </span>
+                      <span>&middot;</span>
                       <span className="capitalize">{item.content_type}</span>
+                      <span>&middot;</span>
+                      <ScoreBadge score={item.score} />
                     </div>
                   </div>
                   <DashboardActions id={item.id} published={item.published === 1} />
@@ -189,6 +193,13 @@ export default async function DashboardPage() {
           </div>
         </>
       )}
+
+      {/* Invite generator — trusted authors only, at the bottom so it doesn't disrupt the normal layout */}
+      {isTrustedAuthor && (
+        <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800">
+          <GenerateInvitePanel remainingToday={remainingToday} />
+        </div>
+      )}
     </div>
   );
 
@@ -197,12 +208,12 @@ export default async function DashboardPage() {
     <div className="mx-auto max-w-5xl px-4 py-6">
       {favorites.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-48 text-zinc-500 text-center">
-          <p className="text-sm">No favorites yet — star a post to save it here.</p>
+          <p className="text-sm">No favorites yet — star a page to save it here.</p>
         </div>
       ) : (
         <>
           <p className="text-sm text-zinc-500 mb-4">
-            {favorites.length} {favorites.length === 1 ? "post" : "posts"}
+            {favorites.length} {favorites.length === 1 ? "page" : "pages"}
           </p>
           <div className="space-y-3">
             {favorites.map((item) => (

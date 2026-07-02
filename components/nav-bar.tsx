@@ -43,7 +43,7 @@ export default function NavBar({ user }: { user: NavUser | null }) {
           {user ? (
             <Link
               href="/dashboard"
-              className="flex items-center gap-1.5 text-xs font-semibold text-amber-500 hover:text-amber-400 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
+              className="flex items-center gap-1.5 text-xs font-semibold text-blue-500 hover:text-blue-400 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
             >
               @{user.username}
               {isTrustedAuthor && (
@@ -95,7 +95,7 @@ export default function NavBar({ user }: { user: NavUser | null }) {
           {user ? (
             <Link
               href="/dashboard"
-              className="flex items-center gap-1.5 w-fit text-xs font-semibold text-amber-500 hover:text-amber-400 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
+              className="flex items-center gap-1.5 w-fit text-xs font-semibold text-blue-500 hover:text-blue-400 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
               onClick={() => setMenuOpen(false)}
             >
               @{user.username}

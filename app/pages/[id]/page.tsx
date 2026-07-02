@@ -75,7 +75,7 @@ export default async function PageViewer({ params }: Props) {
 
       {/* Fixed top bar */}
       <header className="shrink-0 border-b border-zinc-200 dark:border-zinc-800">
-        <div className="mx-auto max-w-3xl px-4 py-3 flex items-center justify-between gap-4">
+        <div className="mx-auto max-w-5xl px-4 py-3 flex items-center justify-between gap-4">
           <Link
             href="/"
             className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 shrink-0"
@@ -98,7 +98,7 @@ export default async function PageViewer({ params }: Props) {
 
       {/* Scrollable content */}
       <main className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
+        <div className="mx-auto max-w-5xl px-4 py-8 sm:py-12 xl:px-16">
 
           {/* Author byline — links to profile */}
           <Link
@@ -124,7 +124,7 @@ export default async function PageViewer({ params }: Props) {
           )}
 
           {/* Vote / favorite bar */}
-          <div className="mt-5 mb-2">
+          <div className="mt-5 mb-8">
             <VoteButtons
               contentId={page.id}
               initialScore={score}
@@ -135,13 +135,7 @@ export default async function PageViewer({ params }: Props) {
             />
           </div>
 
-          <hr className="mt-4 mb-8 border-zinc-200 dark:border-zinc-800" />
-
           <PageRenderer body={page.body} />
-
-          <div className="mt-16 pt-8 border-t border-zinc-200 dark:border-zinc-800 text-sm text-zinc-400 text-center">
-            — {displayName}
-          </div>
         </div>
       </main>
     </div>

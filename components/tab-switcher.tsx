@@ -18,16 +18,16 @@ export default function TabSwitcher({ panels, defaultTab }: Props) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Tab bar — scrolls horizontally on small screens */}
-      <div className="shrink-0 flex gap-1 border-b border-zinc-200 dark:border-zinc-800 px-4 pt-2 overflow-x-auto scrollbar-none">
+      {/* Tab bar — centered floating pills, no underline */}
+      <div className="shrink-0 flex justify-center gap-1 px-4 py-3 overflow-x-auto scrollbar-none">
         {panels.map((panel) => (
           <button
             key={panel.key}
             onClick={() => setActive(panel.key)}
-            className={`shrink-0 px-4 py-2 text-sm font-medium rounded-t-md transition-colors border-b-2 -mb-px whitespace-nowrap
+            className={`shrink-0 px-4 py-1.5 text-sm font-medium rounded-full transition-all duration-150 whitespace-nowrap
               ${active === panel.key
-                ? 'border-zinc-900 text-zinc-900 dark:border-zinc-100 dark:text-zinc-100'
-                : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
+                ? 'bg-zinc-800 text-zinc-100 dark:bg-zinc-200 dark:text-zinc-900'
+                : 'text-zinc-500 hover:bg-zinc-200/70 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700/60 dark:hover:text-zinc-200'
               }`}
           >
             {panel.label}

@@ -148,7 +148,7 @@ export default async function ProfilePage({ params }: Props) {
       ) : (
         <>
           <p className="text-sm text-zinc-500 mb-4">
-            {favorites.length} {favorites.length === 1 ? "post" : "posts"}
+            {favorites.length} {favorites.length === 1 ? "page" : "pages"}
           </p>
           <div className="space-y-3">
             {favorites.map((item) => (
