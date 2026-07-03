@@ -20,7 +20,11 @@ echo "Updating system..."
 apt update && apt upgrade -y
 
 echo "Installing dependencies..."
-apt install -y git curl nginx nodejs npm
+apt install -y git curl nginx
+export NVM_DIR="$HOME/.nvm"
+source "$NVM_DIR/nvm.sh"
+nvm install --lts
+nvm use --lts
 
 echo "Installing PM2..."
 npm install -g pm2
