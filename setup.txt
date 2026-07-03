@@ -4,7 +4,7 @@ set -e
 ### ===================== CONFIG =====================
 APP_NAME="nameless-pages"
 REPO_URL="https://github.com/Next-Level-Dev/nameless-pages.git"
-APP_DIR="/var/www/$APP_NAME"
+APP_DIR="/home/ubuntu/$APP_NAME"
 
 DOMAIN="namelesspages.duckdns.com"
 PORT=3000
@@ -16,70 +16,107 @@ WEBHOOK_PORT=9000
 WEBHOOK_SECRET="supersecret"
 ### ==================================================
 
+# Ensure we're running as root (this script needs root to set up system services)
+if [ "$EUID" -ne 0 ]; then 
+  echo "ERROR: This setup script must be run with sudo"
+  echo "Usage: sudo bash setup.sh"
+  exit 1
+fi
+
 echo "Updating system..."
 apt update && apt upgrade -y
 
 echo "Installing dependencies..."
-apt install -y git curl nginx
+apt install -y git curl nginx webhook
+
+# Install Node.js via NVM for ubuntu user
+echo "Installing Node.js via NVM..."
+sudo -u ubuntu bash << 'NSUBSHELL'
 export NVM_DIR="/home/ubuntu/.nvm"
-source "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+if [ ! -d "$NVM_DIR" ]; then
+  echo "Setting up NVM..."
+  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+  export NVM_DIR="/home/ubuntu/.nvm"
+  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+fi
+
+echo "Installing Node LTS..."
 nvm install --lts
 nvm use --lts
+nvm alias default node
 
 echo "Installing PM2..."
 npm install -g pm2
-
-echo "Installing webhook tool..."
-apt install -y webhook
+NSUBSHELL
 
 echo "Creating app directory..."
-sudo mkdir -p $APP_DIR
-cd $APP_DIR
+sudo -u ubuntu mkdir -p $APP_DIR
+
+echo "Cloning/updating repo as ubuntu user..."
+sudo -u ubuntu bash << 'GITSUBSHELL'
+cd /home/ubuntu/nameless-pages
 
 if [ ! -d ".git" ]; then
   echo "Cloning repo..."
-  sudo git clone $REPO_URL .
+  git clone https://github.com/Next-Level-Dev/nameless-pages.git .
+else
+  echo "Repo already cloned, pulling latest..."
+  git pull origin main || true
 fi
 
 echo "Installing Node dependencies..."
+export NVM_DIR="/home/ubuntu/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 npm install
 
-echo "Building project (if build exists)..."
+echo "Building project..."
 npm run build || true
+GITSUBSHELL
 
-echo "Setting up PM2..."
-pm2 delete $APP_NAME || true
-pm2 start npm --name "$APP_NAME" -- start
+echo "Setting up PM2 to start on boot..."
+sudo -u ubuntu bash << 'PM2SUBSHELL'
+export NVM_DIR="/home/ubuntu/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+pm2 delete nameless-pages || true
+cd /home/ubuntu/nameless-pages
+pm2 start npm --name "nameless-pages" -- start
 pm2 save
-pm2 startup systemd -u root --hp /root | tail -n 1 | bash || true
+
+# Setup PM2 to start on boot (this needs root, but pm2 daemon runs as ubuntu)
+pm2 startup systemd -u ubuntu --hp /home/ubuntu | tail -n 1 | bash || true
+PM2SUBSHELL
 
 echo "Configuring Nginx..."
-sudo cat > /etc/nginx/sites-available/$APP_NAME <<EOF
+cat > /etc/nginx/sites-available/nameless-pages <<'NGINXEOF'
 server {
     listen 80;
-    server_name $DOMAIN;
+    server_name namelesspages.duckdns.com;
 
     location / {
-        proxy_pass http://localhost:$PORT;
+        proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
     }
 }
-EOF
+NGINXEOF
 
-ln -sf /etc/nginx/sites-available/$APP_NAME /etc/nginx/sites-enabled/
+ln -sf /etc/nginx/sites-available/nameless-pages /etc/nginx/sites-enabled/
 
 nginx -t && systemctl restart nginx
 
 echo "Creating deploy script..."
-sudo cat > $APP_DIR/deploy.sh <<'EOF'
+cat > /home/ubuntu/nameless-pages/deploy.sh <<'DEPLOYEOF'
 #!/bin/bash
 set -e
 
-APP_DIR="/var/www/nameless-pages"
+APP_DIR="/home/ubuntu/nameless-pages"
+APP_NAME="nameless-pages"
 
 cd $APP_DIR
 
@@ -87,37 +124,41 @@ echo "Pulling latest changes..."
 git pull origin main
 
 echo "Installing dependencies..."
+export NVM_DIR="/home/ubuntu/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 npm install
 
 echo "Building project..."
 npm run build || true
 
 echo "Restarting PM2..."
-pm2 restart nameless-pages
+pm2 restart $APP_NAME
 
 echo "Running custom project script if exists..."
 if [ -f "./on-deploy.sh" ]; then
   chmod +x ./on-deploy.sh
   ./on-deploy.sh
 fi
-EOF
 
-chmod +x $APP_DIR/deploy.sh
+echo "Deploy complete!"
+DEPLOYEOF
+
+chmod +x /home/ubuntu/nameless-pages/deploy.sh
 
 echo "Setting up GitHub webhook listener..."
 
-sudo mkdir -p /etc/webhook
+mkdir -p /etc/webhook
 
-sudo cat > /etc/webhook/hooks.json <<EOF
+cat > /etc/webhook/hooks.json <<'WEBHOOKEOF'
 [
   {
     "id": "deploy",
-    "execute-command": "$APP_DIR/deploy.sh",
-    "command-working-directory": "$APP_DIR",
+    "execute-command": "/home/ubuntu/nameless-pages/deploy.sh",
+    "command-working-directory": "/home/ubuntu/nameless-pages",
     "trigger-rule": {
       "match": {
         "type": "value",
-        "value": "$WEBHOOK_SECRET",
+        "value": "supersecret",
         "parameter": {
           "source": "payload",
           "name": "secret"
@@ -126,21 +167,22 @@ sudo cat > /etc/webhook/hooks.json <<EOF
     }
   }
 ]
-EOF
+WEBHOOKEOF
 
-sudo cat > /etc/systemd/system/webhook.service <<EOF
+cat > /etc/systemd/system/webhook.service <<'SVCEOF'
 [Unit]
 Description=GitHub Webhook Listener
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/webhook -hooks /etc/webhook/hooks.json -port $WEBHOOK_PORT -verbose
+ExecStart=/usr/bin/webhook -hooks /etc/webhook/hooks.json -port 9000 -verbose
 Restart=always
-User=root
+User=ubuntu
+Group=ubuntu
 
 [Install]
 WantedBy=multi-user.target
-EOF
+SVCEOF
 
 systemctl daemon-reload
 systemctl enable webhook
@@ -148,18 +190,31 @@ systemctl start webhook
 
 echo "Setting up DuckDNS cron..."
 
-sudo cat > /usr/local/bin/duckdns.sh <<EOF
+cat > /usr/local/bin/duckdns.sh <<'DUCKEOF'
 #!/bin/bash
-echo url="https://www.duckdns.org/update?domains=$DUCKDNS_DOMAIN&token=$DUCKDNS_TOKEN&ip=" | curl -k -o /var/log/duckdns.log -K -
-EOF
+echo url="https://www.duckdns.org/update?domains=namelesspages&token=d29f4faa-9903-4c9c-a86e-51d28f2fac5f&ip=" | curl -k -o /var/log/duckdns.log -K -
+DUCKEOF
 
 chmod +x /usr/local/bin/duckdns.sh
 
-crontab -l 2>/dev/null | grep -v duckdns.sh | { cat; echo "*/5 * * * * /usr/local/bin/duckdns.sh >/dev/null 2>&1"; } | crontab -
+# Add cron job for root (system-level task, needs root)
+(crontab -l 2>/dev/null | grep -v duckdns.sh || true; echo "*/5 * * * * /usr/local/bin/duckdns.sh >/dev/null 2>&1") | crontab -
 
-echo "Restarting PM2..."
-pm2 restart all
-
-echo "DONE."
-echo "Webhook endpoint: http://SERVER_IP:$WEBHOOK_PORT/hooks/deploy"
-echo "Make sure GitHub webhook sends JSON with: { \"secret\": \"$WEBHOOK_SECRET\" }"
+echo ""
+echo "=========================================="
+echo "✓ Setup complete!"
+echo "=========================================="
+echo ""
+echo "App directory: /home/ubuntu/nameless-pages"
+echo "Webhook endpoint: http://SERVER_IP:9000/hooks/deploy"
+echo "Make sure GitHub webhook sends JSON with: { \"secret\": \"supersecret\" }"
+echo ""
+echo "To verify everything is working:"
+echo "  sudo -u ubuntu pm2 list                    # Check PM2 status"
+echo "  sudo -u ubuntu pm2 logs nameless-pages     # View app logs"
+echo "  systemctl status webhook                   # Check webhook service"
+echo "  curl http://localhost:3000                 # Test app via localhost"
+echo ""
+echo "To manually deploy:"
+echo "  /home/ubuntu/nameless-pages/deploy.sh"
+echo ""
