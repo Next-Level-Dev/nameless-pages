@@ -33,12 +33,12 @@ echo "Installing webhook tool..."
 apt install -y webhook
 
 echo "Creating app directory..."
-mkdir -p $APP_DIR
+sudo mkdir -p $APP_DIR
 cd $APP_DIR
 
 if [ ! -d ".git" ]; then
   echo "Cloning repo..."
-  git clone $REPO_URL .
+  sudo git clone $REPO_URL .
 fi
 
 echo "Installing Node dependencies..."
@@ -54,7 +54,7 @@ pm2 save
 pm2 startup systemd -u root --hp /root | tail -n 1 | bash || true
 
 echo "Configuring Nginx..."
-cat > /etc/nginx/sites-available/$APP_NAME <<EOF
+sudo cat > /etc/nginx/sites-available/$APP_NAME <<EOF
 server {
     listen 80;
     server_name $DOMAIN;
@@ -75,7 +75,7 @@ ln -sf /etc/nginx/sites-available/$APP_NAME /etc/nginx/sites-enabled/
 nginx -t && systemctl restart nginx
 
 echo "Creating deploy script..."
-cat > $APP_DIR/deploy.sh <<'EOF'
+sudo cat > $APP_DIR/deploy.sh <<'EOF'
 #!/bin/bash
 set -e
 
@@ -106,9 +106,9 @@ chmod +x $APP_DIR/deploy.sh
 
 echo "Setting up GitHub webhook listener..."
 
-mkdir -p /etc/webhook
+sudo mkdir -p /etc/webhook
 
-cat > /etc/webhook/hooks.json <<EOF
+sudo cat > /etc/webhook/hooks.json <<EOF
 [
   {
     "id": "deploy",
@@ -128,7 +128,7 @@ cat > /etc/webhook/hooks.json <<EOF
 ]
 EOF
 
-cat > /etc/systemd/system/webhook.service <<EOF
+sudo cat > /etc/systemd/system/webhook.service <<EOF
 [Unit]
 Description=GitHub Webhook Listener
 After=network.target
@@ -148,7 +148,7 @@ systemctl start webhook
 
 echo "Setting up DuckDNS cron..."
 
-cat > /usr/local/bin/duckdns.sh <<EOF
+sudo cat > /usr/local/bin/duckdns.sh <<EOF
 #!/bin/bash
 echo url="https://www.duckdns.org/update?domains=$DUCKDNS_DOMAIN&token=$DUCKDNS_TOKEN&ip=" | curl -k -o /var/log/duckdns.log -K -
 EOF
