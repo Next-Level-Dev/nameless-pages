@@ -1,0 +1,161 @@
+#!/bin/bash
+set -e
+
+### ===================== CONFIG =====================
+APP_NAME="nameless-pages"
+REPO_URL="https://github.com/Next-Level-Dev/nameless-pages.git"
+APP_DIR="/var/www/$APP_NAME"
+
+DOMAIN="namelesspages.duckdns.com"
+PORT=3000
+
+DUCKDNS_DOMAIN="namelesspages"
+DUCKDNS_TOKEN="d29f4faa-9903-4c9c-a86e-51d28f2fac5f"
+
+WEBHOOK_PORT=9000
+WEBHOOK_SECRET="supersecret"
+### ==================================================
+
+echo "Updating system..."
+apt update && apt upgrade -y
+
+echo "Installing dependencies..."
+apt install -y git curl nginx nodejs npm
+
+echo "Installing PM2..."
+npm install -g pm2
+
+echo "Installing webhook tool..."
+apt install -y webhook
+
+echo "Creating app directory..."
+mkdir -p $APP_DIR
+cd $APP_DIR
+
+if [ ! -d ".git" ]; then
+  echo "Cloning repo..."
+  git clone $REPO_URL .
+fi
+
+echo "Installing Node dependencies..."
+npm install
+
+echo "Building project (if build exists)..."
+npm run build || true
+
+echo "Setting up PM2..."
+pm2 delete $APP_NAME || true
+pm2 start npm --name "$APP_NAME" -- start
+pm2 save
+pm2 startup systemd -u root --hp /root | tail -n 1 | bash || true
+
+echo "Configuring Nginx..."
+cat > /etc/nginx/sites-available/$APP_NAME <<EOF
+server {
+    listen 80;
+    server_name $DOMAIN;
+
+    location / {
+        proxy_pass http://localhost:$PORT;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+    }
+}
+EOF
+
+ln -sf /etc/nginx/sites-available/$APP_NAME /etc/nginx/sites-enabled/
+
+nginx -t && systemctl restart nginx
+
+echo "Creating deploy script..."
+cat > $APP_DIR/deploy.sh <<'EOF'
+#!/bin/bash
+set -e
+
+APP_DIR="/var/www/nameless-pages"
+
+cd $APP_DIR
+
+echo "Pulling latest changes..."
+git pull origin main
+
+echo "Installing dependencies..."
+npm install
+
+echo "Building project..."
+npm run build || true
+
+echo "Restarting PM2..."
+pm2 restart nameless-pages
+
+echo "Running custom project script if exists..."
+if [ -f "./on-deploy.sh" ]; then
+  chmod +x ./on-deploy.sh
+  ./on-deploy.sh
+fi
+EOF
+
+chmod +x $APP_DIR/deploy.sh
+
+echo "Setting up GitHub webhook listener..."
+
+mkdir -p /etc/webhook
+
+cat > /etc/webhook/hooks.json <<EOF
+[
+  {
+    "id": "deploy",
+    "execute-command": "$APP_DIR/deploy.sh",
+    "command-working-directory": "$APP_DIR",
+    "trigger-rule": {
+      "match": {
+        "type": "value",
+        "value": "$WEBHOOK_SECRET",
+        "parameter": {
+          "source": "payload",
+          "name": "secret"
+        }
+      }
+    }
+  }
+]
+EOF
+
+cat > /etc/systemd/system/webhook.service <<EOF
+[Unit]
+Description=GitHub Webhook Listener
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/webhook -hooks /etc/webhook/hooks.json -port $WEBHOOK_PORT -verbose
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable webhook
+systemctl start webhook
+
+echo "Setting up DuckDNS cron..."
+
+cat > /usr/local/bin/duckdns.sh <<EOF
+#!/bin/bash
+echo url="https://www.duckdns.org/update?domains=$DUCKDNS_DOMAIN&token=$DUCKDNS_TOKEN&ip=" | curl -k -o /var/log/duckdns.log -K -
+EOF
+
+chmod +x /usr/local/bin/duckdns.sh
+
+crontab -l 2>/dev/null | grep -v duckdns.sh | { cat; echo "*/5 * * * * /usr/local/bin/duckdns.sh >/dev/null 2>&1"; } | crontab -
+
+echo "Restarting PM2..."
+pm2 restart all
+
+echo "DONE."
+echo "Webhook endpoint: http://SERVER_IP:$WEBHOOK_PORT/hooks/deploy"
+echo "Make sure GitHub webhook sends JSON with: { \"secret\": \"$WEBHOOK_SECRET\" }"
